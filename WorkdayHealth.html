@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workday Health Dashboard | Pro</title>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --accent: #8b5cf6;
+            --border: #e2e8f0;
+            --success: #10b981;
+            --overlay-bg: rgba(15, 23, 42, 0.96);
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 2rem;
+            background: var(--bg);
+            color: var(--text-main);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        header {
+            margin-bottom: 2.5rem;
+            text-align: center;
+        }
+
+        h1 {
+            font-weight: 800;
+            margin: 0 0 0.5rem 0;
+            color: var(--text-main);
+            font-size: 2.8rem;
+            letter-spacing: -0.04em;
+        }
+
+        header p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 1.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+            border: 1px solid var(--border);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 20px -8px rgb(0 0 0 / 0.1);
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+            color: var(--text-main);
+        }
+
+        .card-title svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--primary);
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.875rem 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .setting-row:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .setting-label {
+            font-weight: 600;
+            color: var(--text-main);
+            font-size: 0.95rem;
+        }
+
+        .setting-desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: block;
+            font-weight: 400;
+            margin-top: 2px;
+        }
+
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 26px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #cbd5e1;
+            transition: .3s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        input:checked+.slider {
+            background-color: var(--primary);
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(22px);
+        }
+
+        select {
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: #fff;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-main);
+            outline: none;
+            cursor: pointer;
+            appearance: none;
+        }
+
+        /* Dashboard Area */
+        .dashboard-area {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            min-height: 250px;
+            align-items: flex-start;
+        }
+
+        .timers {
+            display: flex;
+            gap: 1.5rem;
+            width: 100%;
+        }
+
+        @media (max-width: 800px) {
+            .timers {
+                flex-direction: column;
+            }
+        }
+
+        .timer-card {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            background: var(--card-bg);
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.05);
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+        }
+
+        .timer-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: var(--primary);
+        }
+
+        .timer-card.posture::before {
+            background: var(--success);
+        }
+
+        .timer-card.stretch::before {
+            background: var(--accent);
+        }
+
+        .timer-card .icon-group {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .timer-card svg {
+            width: 44px;
+            height: 44px;
+            fill: var(--primary);
+            opacity: 0.9;
+        }
+
+        .timer-card.posture svg {
+            fill: var(--success);
+        }
+
+        .timer-card.stretch svg {
+            fill: var(--accent);
+        }
+
+        .time-display {
+            font-size: 3.5rem;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+            color: var(--text-main);
+            letter-spacing: -0.04em;
+        }
+
+        .timer-label {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .timer-disabled {
+            opacity: 0.35;
+            filter: grayscale(1);
+        }
+
+        /* Tips Card */
+        .tips-card {
+            background: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%);
+            border: 1px solid #ddd6fe;
+        }
+
+        .tip-content {
+            font-style: italic;
+            color: #4338ca;
+            font-weight: 500;
+            font-size: 1rem;
+            line-height: 1.5;
+            margin-top: 1rem;
+        }
+
+        .tip-refresh {
+            font-size: 0.8rem;
+            color: var(--accent);
+            cursor: pointer;
+            text-decoration: underline;
+            margin-top: 0.5rem;
+            display: inline-block;
+            font-weight: 600;
+        }
+
+        /* Overlay & Toast */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--overlay-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+            padding: 2rem;
+        }
+
+        .overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .overlay-icon-wrapper svg {
+            width: 100px;
+            height: 100px;
+            fill: #60a5fa;
+            margin-bottom: 1.5rem;
+        }
+
+        .overlay h2 {
+            font-size: 3.5rem;
+            margin-bottom: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+        }
+
+        .overlay ol {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 2rem 3rem 2rem 4rem;
+            border-radius: 20px;
+            text-align: left;
+            margin-bottom: 2rem;
+            font-size: 1.4rem;
+            max-width: 750px;
+        }
+
+        .overlay-countdown {
+            font-size: 8rem;
+            font-weight: 800;
+            color: #60a5fa;
+            line-height: 1;
+        }
+
+        .toast {
+            background: var(--card-bg);
+            border-left: 6px solid var(--primary);
+            padding: 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            width: 420px;
+            transform: translateX(120%);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid var(--border);
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 999;
+        }
+
+        .toast.active {
+            transform: translateX(0);
+        }
+
+        .toast-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .toast-header svg {
+            width: 32px;
+            height: 32px;
+            fill: var(--primary);
+        }
+
+        .toast h3 {
+            margin: 0;
+            font-size: 1.3rem;
+            font-weight: 800;
+        }
+
+        .toast ol {
+            margin: 0 0 1.25rem 0;
+            padding-left: 1.2rem;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .toast button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.8rem 1rem;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 700;
+            width: 100%;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Workday Health Dashboard</h1>
+            <p>Clinically-inspired protocols & system-level ergonomics.</p>
+        </header>
+
+        <div class="grid">
+            <!-- Protocol Settings -->
+            <div class="card">
+                <div class="card-title">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-1-11v6h2v-6h-2zm0-4v2h2V7h-2z" />
+                    </svg>
+                    Health Protocols
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label">Vision (20-20-20) <span class="setting-desc">Eye hydration
+                            check</span></span>
+                    <label class="switch"><input type="checkbox" id="toggle-vision"><span class="slider"></span></label>
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label">Posture & Water <span class="setting-desc">Full ergonomic
+                            reset</span></span>
+                    <label class="switch"><input type="checkbox" id="toggle-posture"><span
+                            class="slider"></span></label>
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label">Micro-Stretch <span class="setting-desc">Movement every 90
+                            min</span></span>
+                    <label class="switch"><input type="checkbox" id="toggle-stretch"><span
+                            class="slider"></span></label>
+                </div>
+            </div>
+
+            <!-- Alert Settings -->
+            <div class="card">
+                <div class="card-title">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
+                    </svg>
+                    Alert Configuration
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label">System Notifications <span class="setting-desc">Show OS alerts while
+                            hidden</span></span>
+                    <label class="switch"><input type="checkbox" id="toggle-notif"><span class="slider"></span></label>
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label">Display Mode</span>
+                    <select id="select-display">
+                        <option value="timer">Timer View</option>
+                        <option value="popup">Status Only</option>
+                    </select>
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label">Style</span>
+                    <select id="select-style">
+                        <option value="gentle">Gentle Popup</option>
+                        <option value="strict">Strict Overlay</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Daily Wisdom -->
+            <div class="card tips-card">
+                <div class="card-title">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z" />
+                    </svg>
+                    Health Wisdom
+                </div>
+                <div id="tip-text" class="tip-content">Loading your first tip...</div>
+                <span class="tip-refresh" onclick="rotateTip()">Refresh wisdom</span>
+                <div style="margin-top: 1.5rem;">
+                    <span class="setting-label" style="font-size: 0.8rem;">Categories:</span>
+                    <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                        <input type="checkbox" checked id="tip-cat-ergo"> <label
+                            style="font-size: 0.75rem;">Ergo</label>
+                        <input type="checkbox" checked id="tip-cat-mental"> <label
+                            style="font-size: 0.75rem;">Mental</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-area" id="dashboard-area"></div>
+    </div>
+
+    <!-- Overlays -->
+    <div class="overlay" id="strict-overlay">
+        <div class="overlay-icon-wrapper" id="overlay-icon-wrapper"></div>
+        <h2 id="overlay-title">Break</h2>
+        <ol id="overlay-instructions"></ol>
+        <div class="overlay-countdown" id="overlay-countdown"></div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script>
+        // --- Configuration ---
+        const INTERVALS = { vision: 20 * 60 * 1000, posture: 60 * 60 * 1000, stretch: 90 * 60 * 1000 };
+        const DURATIONS = { vision: 20, posture: 60, stretch: 60 };
+
+        const SVGS = {
+            vision: `<svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>`,
+            posture: `<svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2" /><path d="M11 8h2v7h5v5h-2v-3h-3v-2h-2V8z" /><path d="M6 10h2v10H6z" /><path d="M6 14h8v2H6z" /></svg>`,
+            stretch: `<svg viewBox="0 0 24 24"><path d="M12 6c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm10 5h-4.47l-1.07-2.68c-.37-.92-1.27-1.47-2.22-1.3l-3.33.56c-.66.11-1.21.57-1.43 1.2L8.5 13H5c-.55 0-1 .45-1 1s.45 1 1 1h4c.34 0 .66-.17.84-.46L11.5 11l.5 5v5c0 .55.45 1 1 1s1-.45 1-1v-5l.5-5.5 1.5 3.5c.13.3.42.5.75.5H22c.55 0 1-.45 1-1s-.45-1-1-1z"/></svg>`,
+            water: `<svg viewBox="0 0 24 24"><path d="M12 20c-3.31 0-6-2.69-6-6 0-4 6-10.75 6-10.75S18 10 18 14c0 3.31-2.69 6-6 6zm0-14.5c-1.32 1.94-4 5.92-4 8.5 0 2.21 1.79 4 4 4s4-1.79 4-4c0-2.58-2.68-6.56-4-8.5z"/></svg>`
+        };
+
+        const TIPS = {
+            ergo: ["Lower your screen to reduce neck strain.", "Your elbows should be at a 90-degree angle.", "Keep your mouse close to avoid shoulder fatigue.", "Use a footrest if your feet don't reach the floor."],
+            mental: ["Try the 4-7-8 breathing technique now.", "Look out a window for 60 seconds to reset.", "A messy desk often leads to a messy mind.", "Take 3 deep breaths before your next meeting."]
+        };
+
+        // --- State ---
+        let settings = { vision: true, posture: true, stretch: true, notif: false, display: 'timer', style: 'gentle' };
+        let state = { visionNext: 0, postureNext: 0, stretchNext: 0, activeBreak: null, breakEndTime: 0 };
+
+        try {
+            const saved = localStorage.getItem('health_v2');
+            if (saved) settings = { ...settings, ...JSON.parse(saved) };
+        } catch (e) { }
+
+        function initTimers() {
+            const now = Date.now();
+            state.visionNext = now + INTERVALS.vision;
+            state.postureNext = now + INTERVALS.posture;
+            state.stretchNext = now + INTERVALS.stretch;
+        }
+
+        // --- Notifications ---
+        async function requestNotif() {
+            if ("Notification" in window) {
+                const perm = await Notification.requestPermission();
+                settings.notif = (perm === "granted");
+                document.getElementById('toggle-notif').checked = settings.notif;
+                save();
+            }
+        }
+
+        function sendSystemAlert(title, body) {
+            if (settings.notif && "Notification" in window && Notification.permission === "granted") {
+                new Notification(title, { body });
+            }
+        }
+
+        // --- Logic ---
+        function save() { localStorage.setItem('health_v2', JSON.stringify(settings)); }
+
+        function rotateTip() {
+            const pool = [];
+            if (document.getElementById('tip-cat-ergo').checked) pool.push(...TIPS.ergo);
+            if (document.getElementById('tip-cat-mental').checked) pool.push(...TIPS.mental);
+            const tip = pool.length ? pool[Math.floor(Math.random() * pool.length)] : "Keep moving!";
+            document.getElementById('tip-text').textContent = `"${tip}"`;
+        }
+
+        function startBreak(type) {
+            state.activeBreak = type;
+            state.breakEndTime = Date.now() + DURATIONS[type] * 1000;
+
+            const content = {
+                vision: { t: 'Vision Break', i: `<li>Focus 20ft away.</li><li>Hold 20s.</li><li>Blink forcefully.</li>` },
+                posture: { t: 'Posture Reset', i: `<li>Feet flat.</li><li>Back straight.</li><li>Drink water now.</li>` },
+                stretch: { t: 'Micro-Stretch', i: `<li>Roll your neck.</li><li>Stretch wrists.</li><li>Deep breath in.</li>` }
+            }[type];
+
+            sendSystemAlert(content.t, "Time for your health break!");
+
+            if (settings.style === 'strict') {
+                const overlay = document.getElementById('strict-overlay');
+                document.getElementById('overlay-icon-wrapper').innerHTML = SVGS[type];
+                document.getElementById('overlay-title').textContent = content.t;
+                document.getElementById('overlay-instructions').innerHTML = content.i;
+                overlay.classList.add('active');
+            } else {
+                showToast(type, content.t, content.i);
+            }
+        }
+
+        function showToast(type, title, instructions) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `<div class="toast-header">${SVGS[type]}<h3>${title}</h3></div><ol>${instructions}</ol><button onclick="dismissToast(this, '${type}')">I'm done!</button>`;
+            document.getElementById('toast-container').appendChild(toast);
+            setTimeout(() => toast.classList.add('active'), 50);
+        }
+
+        window.dismissToast = (btn, type) => {
+            const t = btn.closest('.toast');
+            t.classList.remove('active');
+            setTimeout(() => t.remove(), 500);
+            state[type + 'Next'] = Date.now() + INTERVALS[type];
+            state.activeBreak = null;
+        };
+
+        function render() {
+            const area = document.getElementById('dashboard-area');
+            if (settings.display === 'popup') {
+                area.innerHTML = `<div class="status-active"><div class="pulse"></div>Monitoring Active</div>`;
+            } else {
+                area.innerHTML = `
+      <div class="timers">
+        <div class="timer-card ${!settings.vision ? 'timer-disabled' : ''}">${SVGS.vision}<div class="time-display" id="v-disp">--:--</div><div class="timer-label">Vision</div></div>
+        <div class="timer-card posture ${!settings.posture ? 'timer-disabled' : ''}">${SVGS.posture}${SVGS.water}<div class="time-display" id="p-disp">--:--</div><div class="timer-label">Posture</div></div>
+        <div class="timer-card stretch ${!settings.stretch ? 'timer-disabled' : ''}">${SVGS.stretch}<div class="time-display" id="s-disp">--:--</div><div class="timer-label">Stretch</div></div>
+      </div>`;
+            }
+        }
+
+        function update() {
+            const now = Date.now();
+            if (state.activeBreak && settings.style === 'strict') {
+                const left = Math.ceil((state.breakEndTime - now) / 1000);
+                document.getElementById('overlay-countdown').textContent = left > 0 ? left : '';
+                if (left <= 0) {
+                    document.getElementById('strict-overlay').classList.remove('active');
+                    state[state.activeBreak + 'Next'] = now + INTERVALS[state.activeBreak];
+                    state.activeBreak = null;
+                }
+                return;
+            }
+
+            if (!state.activeBreak) {
+                if (settings.display === 'timer') {
+                    document.getElementById('v-disp').textContent = settings.vision ? format(state.visionNext - now) : 'Off';
+                    document.getElementById('p-disp').textContent = settings.posture ? format(state.postureNext - now) : 'Off';
+                    document.getElementById('s-disp').textContent = settings.stretch ? format(state.stretchNext - now) : 'Off';
+                }
+                for (let k in INTERVALS) if (settings[k] && now >= state[k + 'Next']) return startBreak(k);
+            }
+        }
+
+        function format(ms) {
+            const s = Math.max(0, Math.floor(ms / 1000));
+            return `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
+        }
+
+        // --- Bindings ---
+        document.getElementById('toggle-vision').onclick = (e) => { settings.vision = e.target.checked; save(); render(); };
+        document.getElementById('toggle-posture').onclick = (e) => { settings.posture = e.target.checked; save(); render(); };
+        document.getElementById('toggle-stretch').onclick = (e) => { settings.stretch = e.target.checked; save(); render(); };
+        document.getElementById('toggle-notif').onclick = requestNotif;
+        document.getElementById('select-display').onchange = (e) => { settings.display = e.target.value; save(); render(); };
+        document.getElementById('select-style').onchange = (e) => { settings.style = e.target.value; save(); };
+
+        // Init
+        initTimers();
+        render();
+        rotateTip();
+        document.getElementById('toggle-vision').checked = settings.vision;
+        document.getElementById('toggle-posture').checked = settings.posture;
+        document.getElementById('toggle-stretch').checked = settings.stretch;
+        document.getElementById('toggle-notif').checked = settings.notif;
+        document.getElementById('select-display').value = settings.display;
+        document.getElementById('select-style').value = settings.style;
+        setInterval(update, 500);
+    </script>
+</body>
+
+</html>

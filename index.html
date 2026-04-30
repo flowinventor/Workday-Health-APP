@@ -5,6 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Workday Health Dashboard | Pro</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#3b82f6">
     <style>
         :root {
             --bg: #f8fafc;
@@ -426,6 +430,36 @@
             width: 100%;
             font-size: 1rem;
         }
+
+        .btn-test {
+            background: #f1f5f9;
+            color: var(--primary);
+            border: 1px solid var(--border);
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+            margin-top: 1rem;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-test:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .btn-test svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
     </style>
 </head>
 
@@ -481,6 +515,11 @@
                     <label class="switch"><input type="checkbox" id="toggle-notif"><span class="slider"></span></label>
                 </div>
                 <div class="setting-row">
+                    <span class="setting-label">Sound Alerts <span class="setting-desc">Play a chime when a break
+                            starts</span></span>
+                    <label class="switch"><input type="checkbox" id="toggle-sound"><span class="slider"></span></label>
+                </div>
+                <div class="setting-row">
                     <span class="setting-label">Display Mode</span>
                     <select id="select-display">
                         <option value="timer">Timer View</option>
@@ -494,6 +533,13 @@
                         <option value="strict">Strict Overlay</option>
                     </select>
                 </div>
+                <button class="btn-test" id="btn-test-notif">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
+                    </svg>
+                    Test System Alert & Sound
+                </button>
             </div>
 
             <!-- Daily Wisdom -->
@@ -550,8 +596,9 @@
         };
 
         // --- State ---
-        let settings = { vision: true, posture: true, stretch: true, notif: false, display: 'timer', style: 'gentle' };
+        let settings = { vision: true, posture: true, stretch: true, notif: false, sound: true, display: 'timer', style: 'gentle' };
         let state = { visionNext: 0, postureNext: 0, stretchNext: 0, activeBreak: null, breakEndTime: 0 };
+        let audioCtx = null;
 
         try {
             const saved = localStorage.getItem('health_v2');
@@ -565,19 +612,73 @@
             state.stretchNext = now + INTERVALS.stretch;
         }
 
-        // --- Notifications ---
-        async function requestNotif() {
+        // --- Notifications & Audio Initialization ---
+        async function unlockCapabilities() {
+            // Unlock AudioContext
+            if (!audioCtx) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContextClass();
+            }
+            if (audioCtx.state === 'suspended') {
+                await audioCtx.resume();
+            }
+
+            // Request Notification Permission
             if ("Notification" in window) {
                 const perm = await Notification.requestPermission();
                 settings.notif = (perm === "granted");
                 document.getElementById('toggle-notif').checked = settings.notif;
                 save();
+
+                if (perm === "denied") {
+                    alert("Notification permission was denied. Please enable it in your browser settings to receive alerts while Safari is in the background.");
+                }
             }
+        }
+
+        async function requestNotif() {
+            await unlockCapabilities();
         }
 
         function sendSystemAlert(title, body) {
             if (settings.notif && "Notification" in window && Notification.permission === "granted") {
                 new Notification(title, { body });
+            }
+        }
+
+        // --- Sound ---
+        function playChime() {
+            if (!settings.sound) return;
+            try {
+                if (!audioCtx) {
+                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    audioCtx = new AudioContextClass();
+                }
+
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                const now = audioCtx.currentTime;
+
+                const playTone = (freq, startTime, duration) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, startTime);
+                    gain.gain.setValueAtTime(0, startTime);
+                    gain.gain.linearRampToValueAtTime(0.3, startTime + 0.1);
+                    gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+                    osc.start(startTime);
+                    osc.stop(startTime + duration);
+                };
+
+                playTone(880, now, 1.0); // A5
+                playTone(1108.73, now + 0.15, 1.2); // C#6
+            } catch (e) {
+                console.error("Audio error:", e);
             }
         }
 
@@ -603,6 +704,7 @@
             }[type];
 
             sendSystemAlert(content.t, "Time for your health break!");
+            playChime();
 
             if (settings.style === 'strict') {
                 const overlay = document.getElementById('strict-overlay');
@@ -645,6 +747,18 @@
             }
         }
 
+        // Called every time the user returns to the browser (tab or window focus).
+        // Catches ALL timers that expired while the browser was throttled in the background.
+        function catchUpTimers() {
+            if (state.activeBreak) return;
+            const now = Date.now();
+            for (let k in INTERVALS) {
+                if (settings[k] && now >= state[k + 'Next']) {
+                    return startBreak(k);
+                }
+            }
+        }
+
         function update() {
             const now = Date.now();
             if (state.activeBreak && settings.style === 'strict') {
@@ -660,9 +774,9 @@
 
             if (!state.activeBreak) {
                 if (settings.display === 'timer') {
-                    document.getElementById('v-disp').textContent = settings.vision ? format(state.visionNext - now) : 'Off';
-                    document.getElementById('p-disp').textContent = settings.posture ? format(state.postureNext - now) : 'Off';
-                    document.getElementById('s-disp').textContent = settings.stretch ? format(state.stretchNext - now) : 'Off';
+                    if (document.getElementById('v-disp')) document.getElementById('v-disp').textContent = settings.vision ? format(state.visionNext - now) : 'Off';
+                    if (document.getElementById('p-disp')) document.getElementById('p-disp').textContent = settings.posture ? format(state.postureNext - now) : 'Off';
+                    if (document.getElementById('s-disp')) document.getElementById('s-disp').textContent = settings.stretch ? format(state.stretchNext - now) : 'Off';
                 }
                 for (let k in INTERVALS) if (settings[k] && now >= state[k + 'Next']) return startBreak(k);
             }
@@ -678,8 +792,36 @@
         document.getElementById('toggle-posture').onclick = (e) => { settings.posture = e.target.checked; save(); render(); };
         document.getElementById('toggle-stretch').onclick = (e) => { settings.stretch = e.target.checked; save(); render(); };
         document.getElementById('toggle-notif').onclick = requestNotif;
+        document.getElementById('toggle-sound').onclick = (e) => { settings.sound = e.target.checked; save(); if (settings.sound) playChime(); };
         document.getElementById('select-display').onchange = (e) => { settings.display = e.target.value; save(); render(); };
         document.getElementById('select-style').onchange = (e) => { settings.style = e.target.value; save(); };
+
+        document.getElementById('btn-test-notif').onclick = async () => {
+            await unlockCapabilities();
+            sendSystemAlert("Test Alert", "This is how your health reminders will appear!");
+            playChime();
+        };
+
+        // Unlock audio context on any user interaction (Safari requirement)
+        document.addEventListener('click', () => {
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        });
+
+        // --- Background Catch-Up: fires when user returns to the browser ---
+        // When Safari throttles setInterval in background, timers stop ticking.
+        // These listeners run catchUpTimers() the INSTANT the user comes back,
+        // so the OS notification and chime fire immediately, not minutes later.
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+                catchUpTimers();
+            }
+        });
+
+        window.addEventListener('focus', () => {
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+            catchUpTimers();
+        });
 
         // Init
         initTimers();
@@ -689,10 +831,22 @@
         document.getElementById('toggle-posture').checked = settings.posture;
         document.getElementById('toggle-stretch').checked = settings.stretch;
         document.getElementById('toggle-notif').checked = settings.notif;
+        document.getElementById('toggle-sound').checked = settings.sound;
         document.getElementById('select-display').value = settings.display;
         document.getElementById('select-style').value = settings.style;
         setInterval(update, 500);
     </script>
+    <script>
+        // --- PWA Service Worker Registration ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker registered', reg))
+                    .catch(err => console.error('Service Worker failed', err));
+            });
+        }
+    </script>
 </body>
+
 
 </html>

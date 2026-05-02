@@ -817,14 +817,49 @@
         document.getElementById('select-style').onchange = (e) => { settings.style = e.target.value; save(); };
 
         document.getElementById('btn-test-notif').onclick = async () => {
+            // 1. Unlock audio & request notification permission
             await unlockCapabilities();
-            sendSystemAlert("Test Alert", "This is how your health reminders will appear!");
+
+            // 2. Always play the chime sound (regardless of toggle)
             playChime();
+
+            // 3. Always fire the notification if permission is granted,
+            //    bypassing the settings.notif toggle so the test always works.
+            if ("Notification" in window && Notification.permission === "granted") {
+                try {
+                    new Notification("🔔 Test Alert", {
+                        body: "This is how your health reminders will appear!",
+                        icon: './icon-512.png'
+                    });
+                } catch (e) {
+                    // Safari PWA: fall back to Service Worker notification
+                    navigator.serviceWorker.getRegistration().then(reg => {
+                        if (reg) reg.showNotification("🔔 Test Alert", {
+                            body: "This is how your health reminders will appear!",
+                            icon: './icon-512.png'
+                        });
+                    });
+                }
+            } else if (Notification.permission === "denied") {
+                alert("Notifications are blocked. Please allow them in Safari Settings → Websites → Notifications.");
+            }
         };
 
-        // Unlock audio context on any user interaction (Safari requirement)
-        document.addEventListener('click', () => {
+        // On first user interaction: unlock audio AND auto-prompt for notification permission.
+        // This restores the Apple "Allow Notifications?" dialog that fires on first click.
+        let _firstInteractionDone = false;
+        document.addEventListener('click', async () => {
+            // Always keep audio unlocked
             if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+
+            // Only prompt once, and only if the user hasn't been asked yet
+            if (!_firstInteractionDone && "Notification" in window && Notification.permission === "default") {
+                _firstInteractionDone = true;
+                const perm = await Notification.requestPermission();
+                settings.notif = (perm === "granted");
+                document.getElementById('toggle-notif').checked = settings.notif;
+                save();
+            }
         });
 
         // --- Background Catch-Up: fires when user returns to the browser ---

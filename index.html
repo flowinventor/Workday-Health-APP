@@ -642,7 +642,27 @@
 
         function sendSystemAlert(title, body) {
             if (settings.notif && "Notification" in window && Notification.permission === "granted") {
-                new Notification(title, { body });
+                try {
+                    // Normal Notification API (may throw 'Illegal constructor' in Safari PWAs)
+                    const notif = new Notification(title, { body: body, icon: './icon-512.png' });
+                    notif.onerror = (e) => {
+                        console.error('Notification error', e);
+                        triggerServiceWorkerNotif(title, body);
+                    };
+                } catch (e) {
+                    console.warn('Standard notification failed, trying Service Worker...', e);
+                    triggerServiceWorkerNotif(title, body);
+                }
+            }
+        }
+
+        function triggerServiceWorkerNotif(title, body) {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistration().then(reg => {
+                    if (reg) {
+                        reg.showNotification(title, { body: body, icon: './icon-512.png' });
+                    }
+                });
             }
         }
 
